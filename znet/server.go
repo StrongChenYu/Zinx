@@ -1,7 +1,6 @@
 package znet
 
 import (
-	"errors"
 	"fmt"
 	"net"
 	"zinx/ziface"
@@ -9,20 +8,16 @@ import (
 
 //iServer的接口实现
 type Server struct {
-	Name string
+	Name      string
 	IPVersion string
-	IP string
-	Port int
+	IP        string
+	Port      int
+	router    ziface.IRouter
 }
 
-// test function
-func EchoHandler (conn *net.TCPConn, bytes []byte, cnt int) error {
-	fmt.Println("[Echo Function] call back to client")
-	if _, err := conn.Write(bytes[:cnt]); err != nil {
-		fmt.Println("Write back error: ", err)
-		return errors.New("EchoHandler error")
-	}
-	return nil
+func (server *Server) AddRouter(router ziface.IRouter) {
+	fmt.Println("Add router...")
+	server.router = router
 }
 
 // 启动服务器
@@ -50,19 +45,21 @@ func (server *Server) Start() {
 				continue
 			}
 
-			connection := NewConnection(tcpConn, uint32(cntId), EchoHandler)
+			connection := NewConnection(tcpConn, uint32(cntId), server.router)
+			cntId++
+
 			go connection.Start()
 		}
 	}()
 }
 
 // 停止服务器
-func (server *Server) Stop()  {
+func (server *Server) Stop() {
 
 }
 
 // 运行服务器
-func (server *Server) Serve()  {
+func (server *Server) Serve() {
 	server.Start()
 	select {}
 }
