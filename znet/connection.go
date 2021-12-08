@@ -67,7 +67,7 @@ func (conn *Connection) StartWriter() {
 
 //开启链接
 func (conn *Connection) Start() {
-	fmt.Println("Conn Start(), id is: ", conn.ConnId)
+	fmt.Println("Conn Start(), Id is: ", conn.ConnId)
 	// 读写分离
 	go conn.StartReader()
 	// go conn.StartWriter()
@@ -75,7 +75,7 @@ func (conn *Connection) Start() {
 
 // 停止连接
 func (conn *Connection) Stop() {
-	fmt.Println("Connection stop(), id is:", conn.ConnId)
+	fmt.Println("Connection stop(), Id is:", conn.ConnId)
 
 	if conn.isClosed {
 		return
@@ -83,7 +83,7 @@ func (conn *Connection) Stop() {
 
 	conn.isClosed = true
 	if err := conn.Conn.Close(); err != nil {
-		fmt.Println("Connection stop error, id is:", conn.ConnId)
+		fmt.Println("Connection stop error, Id is:", conn.ConnId)
 	}
 	close(conn.ExitChan)
 }
