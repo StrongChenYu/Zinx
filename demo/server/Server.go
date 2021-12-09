@@ -6,14 +6,28 @@ import (
 	"zinx/znet"
 )
 
-type OwnRouter struct {
+type OwnRouter1 struct {
 	ziface.IRouter
 }
 
-func (router *OwnRouter) BeforeHandler(request ziface.IRequest) {}
-func (router *OwnRouter) AfterHandler(request ziface.IRequest)  {}
+type OwnRouter2 struct {
+	ziface.IRouter
+}
 
-func (router *OwnRouter) Handler(request ziface.IRequest) {
+func (router *OwnRouter1) BeforeHandler(request ziface.IRequest) {}
+func (router *OwnRouter1) AfterHandler(request ziface.IRequest)  {}
+func (router *OwnRouter1) Handler(request ziface.IRequest) {
+	fmt.Println("this is router1")
+	err := request.GetConnection().Send(request.GetData(), 0)
+	if err != nil {
+		fmt.Println("error occur while invoking handler")
+	}
+}
+
+func (router *OwnRouter2) BeforeHandler(request ziface.IRequest) {}
+func (router *OwnRouter2) AfterHandler(request ziface.IRequest)  {}
+func (router *OwnRouter2) Handler(request ziface.IRequest) {
+	fmt.Println("this is router2")
 	err := request.GetConnection().Send(request.GetData(), 0)
 	if err != nil {
 		fmt.Println("error occur while invoking handler")
@@ -22,6 +36,7 @@ func (router *OwnRouter) Handler(request ziface.IRequest) {
 
 func main() {
 	server := znet.NewServer("v1.0")
-	server.AddRouter(&OwnRouter{})
+	server.AddRouter(0, &OwnRouter1{})
+	server.AddRouter(1, &OwnRouter2{})
 	server.Serve()
 }

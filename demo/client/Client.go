@@ -21,13 +21,13 @@ func main() {
 	for {
 		msg1 := &znet.Message{
 			Len:  4,
-			Id:   5,
+			Id:   0,
 			Data: []byte{'h', 'e', 'l', 'l'},
 		}
 
 		msg2 := &znet.Message{
 			Len:  6,
-			Id:   5,
+			Id:   1,
 			Data: []byte{'h', 'e', 'l', 'l', 'o', 'o'},
 		}
 

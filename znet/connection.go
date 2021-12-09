@@ -13,23 +13,23 @@ type Connection struct {
 	// 连接的ID
 	ConnId uint32
 	// 当前的连接状态
-	isClosed bool
-	// 当前连接所绑定的Router
-	router ziface.IRouter
+	IsClosed bool
+	// 当前连接管理的router
+	MsgHandler ziface.IMsgHandler
 	// 告知当前链接已经退出/停止 channel
 	ExitChan chan bool
 	// 默认的拆包器
 	DataPack ziface.IDataPack
 }
 
-func NewConnection(conn *net.TCPConn, connId uint32, router ziface.IRouter) *Connection {
+func NewConnection(conn *net.TCPConn, connId uint32, msgHandler ziface.IMsgHandler) *Connection {
 	s := Connection{
-		Conn:     conn,
-		ConnId:   connId,
-		isClosed: false,
-		router:   router,
-		ExitChan: make(chan bool, 1),
-		DataPack: NewDataPack(),
+		Conn:       conn,
+		ConnId:     connId,
+		IsClosed:   false,
+		MsgHandler: msgHandler,
+		ExitChan:   make(chan bool, 1),
+		DataPack:   NewDataPack(),
 	}
 	return &s
 }
@@ -74,11 +74,7 @@ func (conn *Connection) StartReader() {
 			Msg:  msg,
 		}
 
-		go func(request ziface.IRequest) {
-			conn.router.BeforeHandler(request)
-			conn.router.Handler(request)
-			conn.router.AfterHandler(request)
-		}(&request)
+		go conn.MsgHandler.DoMsgHandler(&request)
 
 	}
 }
@@ -119,11 +115,11 @@ func (conn *Connection) Start() {
 func (conn *Connection) Stop() {
 	fmt.Println("Connection stop(), Id is:", conn.ConnId)
 
-	if conn.isClosed {
+	if conn.IsClosed {
 		return
 	}
 
-	conn.isClosed = true
+	conn.IsClosed = true
 	if err := conn.Conn.Close(); err != nil {
 		fmt.Println("Connection stop error, Id is:", conn.ConnId)
 	}

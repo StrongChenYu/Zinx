@@ -9,16 +9,16 @@ import (
 
 //iServer的接口实现
 type Server struct {
-	Name      string
-	IPVersion string
-	IP        string
-	Port      int
-	router    ziface.IRouter
+	Name       string
+	IPVersion  string
+	IP         string
+	Port       int
+	MsgHandler ziface.IMsgHandler
 }
 
-func (server *Server) AddRouter(router ziface.IRouter) {
+func (server *Server) AddRouter(id uint32, router ziface.IRouter) {
 	fmt.Println("Add router...")
-	server.router = router
+	server.MsgHandler.RegisterRouter(id, router)
 }
 
 // 启动服务器
@@ -52,7 +52,7 @@ func (server *Server) Start() {
 				continue
 			}
 
-			connection := NewConnection(tcpConn, uint32(cntId), server.router)
+			connection := NewConnection(tcpConn, uint32(cntId), server.MsgHandler)
 			cntId++
 
 			go connection.Start()
@@ -73,10 +73,11 @@ func (server *Server) Serve() {
 
 func NewServer(name string) ziface.IServer {
 	var s = &Server{
-		Name:      utils.GlobalObject.Name,
-		IPVersion: "tcp4",
-		IP:        utils.GlobalObject.Host,
-		Port:      int(utils.GlobalObject.Port),
+		Name:       utils.GlobalObject.Name,
+		IPVersion:  "tcp4",
+		IP:         utils.GlobalObject.Host,
+		Port:       int(utils.GlobalObject.Port),
+		MsgHandler: NewMsgHandler(),
 	}
 	return s
 }
