@@ -7,6 +7,15 @@ type Message struct {
 	Data []byte
 }
 
+func NewMessagePacket(data []byte, msgId uint32) *Message {
+	var msg = &Message{
+		Len:  uint32(len(data)),
+		Id:   msgId,
+		Data: data,
+	}
+	return msg
+}
+
 func (msg *Message) GetLen() uint32 {
 	return msg.Len
 }

@@ -2,8 +2,8 @@ package znet
 
 import (
 	"fmt"
+	"io"
 	"net"
-	"zinx/utils"
 	"zinx/ziface"
 )
 
@@ -18,6 +18,8 @@ type Connection struct {
 	router ziface.IRouter
 	// 告知当前链接已经退出/停止 channel
 	ExitChan chan bool
+	// 默认的拆包器
+	DataPack ziface.IDataPack
 }
 
 func NewConnection(conn *net.TCPConn, connId uint32, router ziface.IRouter) *Connection {
@@ -27,6 +29,7 @@ func NewConnection(conn *net.TCPConn, connId uint32, router ziface.IRouter) *Con
 		isClosed: false,
 		router:   router,
 		ExitChan: make(chan bool, 1),
+		DataPack: NewDataPack(),
 	}
 	return &s
 }
@@ -38,16 +41,37 @@ func (conn *Connection) StartReader() {
 	defer conn.Stop()
 
 	for {
-		buf := make([]byte, utils.GlobalObject.MaxPacketSize)
-		_, err := conn.Conn.Read(buf)
+		// 先读取头部数据
+		headBuf := make([]byte, conn.DataPack.GetHeadLen())
+		_, err := io.ReadFull(conn.Conn, headBuf)
 		if err != nil {
-			fmt.Println("recv buf error", err)
-			continue
+			fmt.Println("read head error: ", err)
+			break
 		}
 
+		// 然后解压
+		msg, err := conn.DataPack.Unpack(headBuf)
+		if err != nil {
+			fmt.Println("unpack buf error: ", err)
+			break
+		}
+
+		// 然后根据长度继续读
+		var bodyBuf []byte
+		if msg.GetLen() > 0 {
+			bodyBuf = make([]byte, msg.GetLen())
+			_, err = io.ReadFull(conn.Conn, bodyBuf)
+			if err != nil {
+				fmt.Println("read body error: ", err)
+				break
+			}
+		}
+
+		// 封装成为request
+		msg.SetData(bodyBuf)
 		request := Request{
 			Conn: conn,
-			data: buf,
+			Msg:  msg,
 		}
 
 		go func(request ziface.IRequest) {
@@ -57,6 +81,24 @@ func (conn *Connection) StartReader() {
 		}(&request)
 
 	}
+}
+
+// 发送数据是否成功
+func (conn *Connection) Send(data []byte, msgId uint32) error {
+	packet := NewMessagePacket(data, msgId)
+
+	binaryData, err := conn.DataPack.Pack(packet)
+	if err != nil {
+		fmt.Println("pack message error: ", err)
+		return err
+	}
+
+	_, err = conn.Conn.Write(binaryData)
+	if err != nil {
+		fmt.Println("send connection error: ", err)
+	}
+
+	return nil
 }
 
 // 写业务
@@ -101,9 +143,4 @@ func (conn *Connection) GetConnID() uint32 {
 // 连接的远程id
 func (conn *Connection) RemoteAddr() net.Addr {
 	return conn.Conn.RemoteAddr()
-}
-
-// 发送数据是否成功
-func (conn *Connection) Send(data []byte) error {
-	return nil
 }
