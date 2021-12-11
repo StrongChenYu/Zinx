@@ -13,21 +13,25 @@ type GlobalObj struct {
 	Name      string
 	Version   string
 
-	MaxPacketSize uint32
-	MaxConn       uint32
+	MaxPacketSize      uint32
+	MaxConn            uint32
+	MaxWorkerSize      uint32
+	MaxWorkerQueueSize uint32
 }
 
 var GlobalObject *GlobalObj
 
 func init() {
 	GlobalObject = &GlobalObj{
-		TcpServer:     nil,
-		Host:          "0.0.0.0",
-		Port:          8080,
-		Name:          "Zinx Server",
-		Version:       "0",
-		MaxPacketSize: 4096,
-		MaxConn:       1000,
+		TcpServer:          nil,
+		Host:               "0.0.0.0",
+		Port:               8080,
+		Name:               "Zinx Server",
+		Version:            "0",
+		MaxPacketSize:      4096,
+		MaxConn:            1000,
+		MaxWorkerSize:      10,
+		MaxWorkerQueueSize: 1024,
 	}
 
 	GlobalObject.Reload()

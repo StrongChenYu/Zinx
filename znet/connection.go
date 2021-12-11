@@ -1,6 +1,7 @@
 package znet
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -18,6 +19,8 @@ type Connection struct {
 	MsgHandler ziface.IMsgHandler
 	// 告知当前链接已经退出/停止 channel
 	ExitChan chan bool
+	// 发送的信息通道，只需要往这个通道里面写就可以了
+	WriteChan chan []byte
 	// 默认的拆包器
 	DataPack ziface.IDataPack
 }
@@ -28,7 +31,8 @@ func NewConnection(conn *net.TCPConn, connId uint32, msgHandler ziface.IMsgHandl
 		ConnId:     connId,
 		IsClosed:   false,
 		MsgHandler: msgHandler,
-		ExitChan:   make(chan bool, 1),
+		ExitChan:   make(chan bool),
+		WriteChan:  make(chan []byte, 1),
 		DataPack:   NewDataPack(),
 	}
 	return &s
@@ -74,13 +78,41 @@ func (conn *Connection) StartReader() {
 			Msg:  msg,
 		}
 
-		go conn.MsgHandler.DoMsgHandler(&request)
+		if conn.MsgHandler.GetWorkerSize() > 0 {
+			// use pool to handle request
+			conn.MsgHandler.HandleRequest(&request)
+		} else {
+			// just handle request in one goroutine, after request is processed, goroutine will be destroyed
+			go conn.MsgHandler.DoMsgHandler(&request)
+		}
+	}
+}
 
+// 写业务
+func (conn *Connection) StartWriter() {
+	fmt.Printf("Connection %d Writer goroutine is starting...\n", conn.ConnId)
+	defer fmt.Printf("Connection %d Writer is exited...\n", conn.ConnId)
+
+	for {
+		select {
+		case data := <-conn.WriteChan:
+			if _, err := conn.Conn.Write(data); err != nil {
+				fmt.Println("write error: ", err)
+				continue
+			}
+		case <-conn.ExitChan:
+			return
+		}
 	}
 }
 
 // 发送数据是否成功
 func (conn *Connection) Send(data []byte, msgId uint32) error {
+	if conn.IsClosed {
+		fmt.Println("connection already close: ")
+		return errors.New("connection already close")
+	}
+
 	packet := NewMessagePacket(data, msgId)
 
 	binaryData, err := conn.DataPack.Pack(packet)
@@ -89,18 +121,8 @@ func (conn *Connection) Send(data []byte, msgId uint32) error {
 		return err
 	}
 
-	_, err = conn.Conn.Write(binaryData)
-	if err != nil {
-		fmt.Println("send connection error: ", err)
-	}
-
+	conn.WriteChan <- binaryData
 	return nil
-}
-
-// 写业务
-func (conn *Connection) StartWriter() {
-	// TODO: 读写分离
-	return
 }
 
 //开启链接
@@ -108,7 +130,7 @@ func (conn *Connection) Start() {
 	fmt.Println("Conn Start(), Id is: ", conn.ConnId)
 	// 读写分离
 	go conn.StartReader()
-	// go conn.StartWriter()
+	go conn.StartWriter()
 }
 
 // 停止连接
@@ -120,10 +142,13 @@ func (conn *Connection) Stop() {
 	}
 
 	conn.IsClosed = true
+	conn.ExitChan <- true
 	if err := conn.Conn.Close(); err != nil {
-		fmt.Println("Connection stop error, Id is:", conn.ConnId)
+		panic("Connection stop error")
 	}
+
 	close(conn.ExitChan)
+	close(conn.WriteChan)
 }
 
 // 获取对应的tcp 连接

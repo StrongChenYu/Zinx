@@ -44,6 +44,8 @@ func (server *Server) Start() {
 			return
 		}
 
+		server.MsgHandler.StartWorkerPool()
+
 		cntId := 0
 		for {
 			tcpConn, err := listener.AcceptTCP()

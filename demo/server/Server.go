@@ -17,7 +17,6 @@ type OwnRouter2 struct {
 func (router *OwnRouter1) BeforeHandler(request ziface.IRequest) {}
 func (router *OwnRouter1) AfterHandler(request ziface.IRequest)  {}
 func (router *OwnRouter1) Handler(request ziface.IRequest) {
-	fmt.Println("this is router1")
 	err := request.GetConnection().Send(request.GetData(), 0)
 	if err != nil {
 		fmt.Println("error occur while invoking handler")
@@ -27,7 +26,6 @@ func (router *OwnRouter1) Handler(request ziface.IRequest) {
 func (router *OwnRouter2) BeforeHandler(request ziface.IRequest) {}
 func (router *OwnRouter2) AfterHandler(request ziface.IRequest)  {}
 func (router *OwnRouter2) Handler(request ziface.IRequest) {
-	fmt.Println("this is router2")
 	err := request.GetConnection().Send(request.GetData(), 0)
 	if err != nil {
 		fmt.Println("error occur while invoking handler")
