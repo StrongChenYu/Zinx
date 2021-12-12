@@ -9,11 +9,12 @@ import (
 
 //iServer的接口实现
 type Server struct {
-	Name       string
-	IPVersion  string
-	IP         string
-	Port       int
-	MsgHandler ziface.IMsgHandler
+	Name        string
+	IPVersion   string
+	IP          string
+	Port        int
+	MsgHandler  ziface.IMsgHandler
+	ConnManager ziface.IConnManager
 }
 
 func (server *Server) AddRouter(id uint32, router ziface.IRouter) {
@@ -23,7 +24,6 @@ func (server *Server) AddRouter(id uint32, router ziface.IRouter) {
 
 // 启动服务器
 func (server *Server) Start() {
-
 	fmt.Printf("[Start] Server name: %s listening at IP: %s, Port %d, is starting\n", server.Name, server.IP, server.Port)
 	fmt.Printf("[%s] Version: %s, MaxConn: %d,  MaxPacketSize: %d\n",
 		utils.GlobalObject.Name,
@@ -44,6 +44,7 @@ func (server *Server) Start() {
 			return
 		}
 
+		// 连接处理goroutine
 		server.MsgHandler.StartWorkerPool()
 
 		cntId := 0
@@ -54,7 +55,8 @@ func (server *Server) Start() {
 				continue
 			}
 
-			connection := NewConnection(tcpConn, uint32(cntId), server.MsgHandler)
+			connection := NewConnection(tcpConn, uint32(cntId), server)
+			server.ConnManager.Add(connection)
 			cntId++
 
 			go connection.Start()
@@ -64,7 +66,7 @@ func (server *Server) Start() {
 
 // 停止服务器
 func (server *Server) Stop() {
-
+	server.ConnManager.ClearAll()
 }
 
 // 运行服务器
@@ -73,13 +75,21 @@ func (server *Server) Serve() {
 	select {}
 }
 
+func (server *Server) GetMsgHandler() ziface.IMsgHandler {
+	return server.MsgHandler
+}
+func (server *Server) GetConnManager() ziface.IConnManager {
+	return server.ConnManager
+}
+
 func NewServer(name string) ziface.IServer {
 	var s = &Server{
-		Name:       utils.GlobalObject.Name,
-		IPVersion:  "tcp4",
-		IP:         utils.GlobalObject.Host,
-		Port:       int(utils.GlobalObject.Port),
-		MsgHandler: NewMsgHandler(),
+		Name:        utils.GlobalObject.Name,
+		IPVersion:   "tcp4",
+		IP:          utils.GlobalObject.Host,
+		Port:        int(utils.GlobalObject.Port),
+		MsgHandler:  NewMsgHandler(),
+		ConnManager: NewConnManager(),
 	}
 	return s
 }

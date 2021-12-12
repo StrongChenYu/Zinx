@@ -16,7 +16,7 @@ type Connection struct {
 	// 当前的连接状态
 	IsClosed bool
 	// 当前连接管理的router
-	MsgHandler ziface.IMsgHandler
+	Server ziface.IServer
 	// 告知当前链接已经退出/停止 channel
 	ExitChan chan bool
 	// 发送的信息通道，只需要往这个通道里面写就可以了
@@ -25,15 +25,15 @@ type Connection struct {
 	DataPack ziface.IDataPack
 }
 
-func NewConnection(conn *net.TCPConn, connId uint32, msgHandler ziface.IMsgHandler) *Connection {
+func NewConnection(conn *net.TCPConn, connId uint32, server ziface.IServer) *Connection {
 	s := Connection{
-		Conn:       conn,
-		ConnId:     connId,
-		IsClosed:   false,
-		MsgHandler: msgHandler,
-		ExitChan:   make(chan bool),
-		WriteChan:  make(chan []byte, 1),
-		DataPack:   NewDataPack(),
+		Conn:      conn,
+		ConnId:    connId,
+		IsClosed:  false,
+		Server:    server,
+		ExitChan:  make(chan bool),
+		WriteChan: make(chan []byte, 1),
+		DataPack:  NewDataPack(),
 	}
 	return &s
 }
@@ -78,12 +78,12 @@ func (conn *Connection) StartReader() {
 			Msg:  msg,
 		}
 
-		if conn.MsgHandler.GetWorkerSize() > 0 {
+		if conn.Server.GetMsgHandler().GetWorkerSize() > 0 {
 			// use pool to handle request
-			conn.MsgHandler.HandleRequest(&request)
+			conn.Server.GetMsgHandler().HandleRequest(&request)
 		} else {
 			// just handle request in one goroutine, after request is processed, goroutine will be destroyed
-			go conn.MsgHandler.DoMsgHandler(&request)
+			go conn.Server.GetMsgHandler().DoMsgHandler(&request)
 		}
 	}
 }
@@ -143,6 +143,10 @@ func (conn *Connection) Stop() {
 
 	conn.IsClosed = true
 	conn.ExitChan <- true
+
+	// 删除链接管理池中的链接
+	conn.Server.GetConnManager().Delete(conn)
+
 	if err := conn.Conn.Close(); err != nil {
 		panic("Connection stop error")
 	}

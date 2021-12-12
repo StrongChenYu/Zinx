@@ -10,4 +10,8 @@ type IServer interface {
 	Serve()
 	// add Router
 	AddRouter(id uint32, router IRouter)
+	// get message request handler
+	GetMsgHandler() IMsgHandler
+	// get connection manager handler
+	GetConnManager() IConnManager
 }
