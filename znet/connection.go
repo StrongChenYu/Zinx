@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"sync"
 	"zinx/utils"
 	"zinx/ziface"
 )
@@ -26,6 +27,10 @@ type Connection struct {
 	WriteBufChan chan []byte
 	// 默认的拆包器
 	DataPack ziface.IDataPack
+	// 属性
+	properties map[string]interface{}
+	// 属性锁
+	pMutex sync.RWMutex
 }
 
 func NewConnection(conn *net.TCPConn, connId uint32, server ziface.IServer) *Connection {
@@ -155,6 +160,30 @@ func (conn *Connection) SendBuf(data []byte, msgId uint32) error {
 
 	conn.WriteBufChan <- binaryData
 	return nil
+}
+
+// 增加属性
+func (conn *Connection) AddProperty(key string, value interface{}) {
+	conn.pMutex.Lock()
+	defer conn.pMutex.Unlock()
+
+	conn.properties[key] = value
+}
+
+// 获取属性
+func (conn *Connection) GetProperty(key string) interface{} {
+	conn.pMutex.RLock()
+	defer conn.pMutex.RUnlock()
+
+	return conn.properties[key]
+}
+
+// 删除属性
+func (conn *Connection) DeleteProperty(key string) {
+	conn.pMutex.Lock()
+	defer conn.pMutex.Unlock()
+
+	delete(conn.properties, key)
 }
 
 //开启链接

@@ -17,6 +17,12 @@ type IConnection interface {
 	Send(data []byte, msgId uint32) error
 	// 发送到缓冲区
 	SendBuf(data []byte, msgId uint32) error
+	// 增加属性
+	AddProperty(string, interface{})
+	// 获取属性
+	GetProperty(string) interface{}
+	// 删除属性
+	DeleteProperty(string)
 }
 
 type HandleFunc func(*net.TCPConn, []byte, int) error
