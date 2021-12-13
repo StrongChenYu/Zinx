@@ -33,7 +33,7 @@ func (router *OwnRouter2) Handler(request ziface.IRequest) {
 }
 
 func main() {
-	server := znet.NewServer("v1.0")
+	server := znet.NewServer()
 	server.AddRouter(0, &OwnRouter1{})
 	server.AddRouter(1, &OwnRouter2{})
 	server.Serve()

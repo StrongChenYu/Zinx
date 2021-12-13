@@ -15,6 +15,10 @@ type Server struct {
 	Port        int
 	MsgHandler  ziface.IMsgHandler
 	ConnManager ziface.IConnManager
+	// 启动钩子函数
+	OnStart func(connection ziface.IConnection)
+	// 停止钩子函数
+	OnStop func(connection ziface.IConnection)
 }
 
 func (server *Server) AddRouter(id uint32, router ziface.IRouter) {
@@ -92,7 +96,32 @@ func (server *Server) GetConnManager() ziface.IConnManager {
 	return server.ConnManager
 }
 
-func NewServer(name string) ziface.IServer {
+func (server *Server) SetHookOnConnStart(f func(connection ziface.IConnection)) {
+	server.OnStart = f
+}
+
+// 设置服务器停止钩子函数
+func (server *Server) SetHookOnConnStop(f func(connection ziface.IConnection)) {
+	server.OnStop = f
+}
+
+// 调用服务器启动钩子函数
+func (server *Server) InvokeHookOnConnStart(connection ziface.IConnection) {
+	if server.OnStart != nil {
+		fmt.Println("Invoke Server Start hook!")
+		server.OnStart(connection)
+	}
+}
+
+// 调用服务器停止钩子函数
+func (server *Server) InvokeHookOnConnStop(connection ziface.IConnection) {
+	if server.OnStop != nil {
+		fmt.Println("Invoke Server Start hook!")
+		server.OnStop(connection)
+	}
+}
+
+func NewServer() ziface.IServer {
 	var s = &Server{
 		Name:        utils.GlobalObject.Name,
 		IPVersion:   "tcp4",

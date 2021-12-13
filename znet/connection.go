@@ -163,6 +163,8 @@ func (conn *Connection) Start() {
 	// 读写分离
 	go conn.StartReader()
 	go conn.StartWriter()
+
+	conn.Server.InvokeHookOnConnStart(conn)
 }
 
 // 停止连接
@@ -175,6 +177,8 @@ func (conn *Connection) Stop() {
 
 	conn.IsClosed = true
 	conn.ExitChan <- true
+
+	conn.Server.InvokeHookOnConnStop(conn)
 
 	// 删除链接管理池中的链接
 	conn.Server.GetConnManager().Delete(conn)
