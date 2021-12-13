@@ -15,6 +15,8 @@ type IConnection interface {
 	RemoteAddr() net.Addr
 	// 发送数据是否成功
 	Send(data []byte, msgId uint32) error
+	// 发送到缓冲区
+	SendBuf(data []byte, msgId uint32) error
 }
 
 type HandleFunc func(*net.TCPConn, []byte, int) error

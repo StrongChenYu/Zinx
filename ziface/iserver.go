@@ -14,4 +14,12 @@ type IServer interface {
 	GetMsgHandler() IMsgHandler
 	// get connection manager handler
 	GetConnManager() IConnManager
+	// 设置服务器启动钩子函数
+	//SetHookOnConnStart(func (connection IConnection))
+	//// 设置服务器停止钩子函数
+	//SetHookOnConnStop(func (connection IConnection))
+	//// 调用服务器启动钩子函数
+	//InvokeHookOnConnStart(func (connection IConnection))
+	//// 调用服务器停止钩子函数
+	//InvokeHookOnConnStop(func (connection IConnection))
 }

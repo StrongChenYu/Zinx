@@ -17,6 +17,7 @@ type GlobalObj struct {
 	MaxConn            uint32
 	MaxWorkerSize      uint32
 	MaxWorkerQueueSize uint32
+	MaxMsgChanLen      uint32
 }
 
 var GlobalObject *GlobalObj
@@ -32,6 +33,7 @@ func init() {
 		MaxConn:            1000,
 		MaxWorkerSize:      10,
 		MaxWorkerQueueSize: 1024,
+		MaxMsgChanLen:      1000,
 	}
 
 	GlobalObject.Reload()

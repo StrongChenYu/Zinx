@@ -55,8 +55,18 @@ func (server *Server) Start() {
 				continue
 			}
 
+			if server.ConnManager.Len() >= int(utils.GlobalObject.MaxConn) {
+				err := tcpConn.Close()
+				if err != nil {
+					fmt.Println("Accept tcp client error: ", err)
+					continue
+				}
+				continue
+			}
+
 			connection := NewConnection(tcpConn, uint32(cntId), server)
 			server.ConnManager.Add(connection)
+
 			cntId++
 
 			go connection.Start()

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"zinx/utils"
 	"zinx/ziface"
 )
 
@@ -21,19 +22,22 @@ type Connection struct {
 	ExitChan chan bool
 	// 发送的信息通道，只需要往这个通道里面写就可以了
 	WriteChan chan []byte
+	// 发送消息的缓冲
+	WriteBufChan chan []byte
 	// 默认的拆包器
 	DataPack ziface.IDataPack
 }
 
 func NewConnection(conn *net.TCPConn, connId uint32, server ziface.IServer) *Connection {
 	s := Connection{
-		Conn:      conn,
-		ConnId:    connId,
-		IsClosed:  false,
-		Server:    server,
-		ExitChan:  make(chan bool),
-		WriteChan: make(chan []byte, 1),
-		DataPack:  NewDataPack(),
+		Conn:         conn,
+		ConnId:       connId,
+		IsClosed:     false,
+		Server:       server,
+		ExitChan:     make(chan bool),
+		WriteChan:    make(chan []byte, 1),
+		WriteBufChan: make(chan []byte, utils.GlobalObject.MaxMsgChanLen),
+		DataPack:     NewDataPack(),
 	}
 	return &s
 }
@@ -100,6 +104,16 @@ func (conn *Connection) StartWriter() {
 				fmt.Println("write error: ", err)
 				continue
 			}
+		case data, ok := <-conn.WriteBufChan:
+			if ok {
+				if _, err := conn.Conn.Write(data); err != nil {
+					fmt.Println("write error: ", err)
+					continue
+				}
+			} else {
+				fmt.Println("msgBuffChan is Closed")
+				break
+			}
 		case <-conn.ExitChan:
 			return
 		}
@@ -122,6 +136,24 @@ func (conn *Connection) Send(data []byte, msgId uint32) error {
 	}
 
 	conn.WriteChan <- binaryData
+	return nil
+}
+
+func (conn *Connection) SendBuf(data []byte, msgId uint32) error {
+	if conn.IsClosed {
+		fmt.Println("connection already close: ")
+		return errors.New("connection already close")
+	}
+
+	packet := NewMessagePacket(data, msgId)
+
+	binaryData, err := conn.DataPack.Pack(packet)
+	if err != nil {
+		fmt.Println("pack message error: ", err)
+		return err
+	}
+
+	conn.WriteBufChan <- binaryData
 	return nil
 }
 
